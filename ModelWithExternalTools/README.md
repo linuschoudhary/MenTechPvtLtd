@@ -95,8 +95,8 @@ ollama pull qwen3.5:4b
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/linuschoudhary/ModelWithExternalTools.git
-   cd ModelWithExternalTools
+   git clone https://github.com/linuschoudhary/MenTechPvtLtd.git
+   cd MenTechPvtLtd/ModelWithExternalTools
    ```
 
 2. Install dependencies:
@@ -192,4 +192,4 @@ This project is open-source. Feel free to fork, extend, and experiment.
 
 ---
 
-> Built as part of the **MenTemTech** learning series — exploring local LLM tool calling with Ollama.
+> Built as part of the **MenTechPvtLtd** learning series — exploring local LLM tool calling with Ollama.
