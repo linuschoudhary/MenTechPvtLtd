@@ -1,0 +1,23 @@
+# ================================================
+# YouTube Video Analyser - Requirements
+# Python 3.12 | Versions matched from project venv
+# ================================================
+
+# --- LangChain Core ---
+langchain==1.3.4
+langchain-core==1.4.1
+
+# --- LangChain Integrations ---
+langchain-community==0.4.2        # YoutubeLoader, Chroma vectorstore
+langchain-text-splitters==1.1.2   # RecursiveCharacterTextSplitter
+langchain-huggingface==1.2.2      # HuggingFaceEmbeddings
+langchain-ollama==1.1.0           # ChatOllama (deepseek-r1:1.5b)
+
+# --- Embeddings ---
+sentence-transformers==5.5.1      # sentence-transformers/all-MiniLM-L6-v2
+
+# --- Vector Store ---
+chromadb==1.5.9                   # Local persistent vector DB (YoutubeVideoDB/)
+
+# --- YouTube Transcript ---
+youtube-transcript-api==1.2.4     # Fetches transcripts via YoutubeLoader

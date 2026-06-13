@@ -17,6 +17,10 @@ google-generativeai
 langchain-huggingface
 transformers
 huggingface-hub
+sentence-transformers
+
+#Ollama Integration
+langchain-ollama
 
 #Environment Variable Management
 python-dotenv
@@ -24,3 +28,8 @@ python-dotenv
 #Machine Learning Utilities
 numpy
 scikit-learn
+
+#Extra
+chromadb
+wikipedia
+youtube-transcript-api
