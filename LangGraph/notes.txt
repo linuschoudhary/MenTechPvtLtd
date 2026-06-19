@@ -1,0 +1,103 @@
+LangGraph Core Concepts
+An orchestration framework for building intelligent, stateful, multi-step LLM workflows modeled as graphs.
+
+Orchestration Power: Supports complex behaviors like parallel execution, loops, and conditional branching.
+
+Stateful Memory: Shared, mutable memory (usually a dictionary) that evolves as it flows through nodes.
+
+Resumability: Fault-tolerant; can recover and continue workflows from the point of failure.
+
+Execution Model: Message passing (inspired by Google Pregel). Parallel node executions are grouped into "supersteps."
+
+Reducers: Functions controlling how node updates merge into the shared state.
+
+Workflows
+Goal-oriented task sequences.
+
+Goal-Oriented: Built to achieve a specific objective.
+
+Complex Execution: Often includes parallel paths, branching, and iterative loops.
+
+LLM-Integration: Critical reasoning, prompting, or tool-calling tasks rely on Large Language Models.
+
+Graph Components
+Graphs: The orchestration structure mapping out tasks and logic.
+
+Nodes: Sub-tasks (Python functions) that call LLMs, use tools, or make decisions.
+
+Edges: Connectors determining the execution flow/sequence.
+
+State: Shared mutable memory holding required data for nodes.
+
+Reducers: State-key functions defining how new data updates existing data (replace, add, merge).
+
+Supersteps: The execution unit containing one or more simultaneous steps before a state update.
+
+Building a StateGraph (4 Steps)
+Add Nodes: Define the Python functions (processing steps).
+
+Add Edges: Connect nodes to establish the sequence.
+
+Compile the Graph: Verify structure, logic, and connections.
+
+Execute the Graph: Trigger it with an initial input state.
+
+State Management: Sequential vs. Parallel
+Sequential: Linear execution (output feeds into input). You can safely return the entire state object.
+
+Parallel: Simultaneous execution. You must use partial state updates (returning only the modified key/value dictionary) to prevent overwrite conflicts.
+
+Best Practice: Always use partial updates for cleaner, robust code in both sequential and parallel workflows.
+
+Reducers & operator.add
+Reducers define how to merge updates instead of overwriting the default state.
+
+operator.add: Most common reducer via Annotated. Safe for parallel concurrency.
+
+Lists: Appends new items (e.g., chat history, parallel branch results). Note: Watch for unbounded memory growth or duplicates if an existing list is returned.
+
+Integers: Sums values (e.g., step counts, tool usage tracking).
+
+Implementation: Define state inside TypedDict as Annotated[Type, operator.add]. Nodes return partial data dictionaries.
+
+Persistence, Supersteps & Checkpointers
+Supersteps: A logical unit of grouped parallel operations. LangGraph creates a check point at every superstep to save the state.
+
+Persistence: Saving/restoring state across time. Provides 4 key benefits:
+
+Short-Term Memory: Remembers past chat interactions.
+
+Fault Tolerance: Resumes from the exact point of failure.
+
+Human-in-the-Loop: Pauses for manual input/feedback, then resumes.
+
+Time Travel: Inspect, replay, or modify past workflow states for debugging.
+
+InMemorySaver: A volatile checkpointer that stores intermediate/final state in RAM. Data is cleared when the program stops.
+
+Streaming
+Outputting generated tokens bit-by-bit in real-time.
+
+Benefits: Reduces latency, improves UX (typewriter effect for readability), enables resource control (stopping mid-generation), and gives step-by-step transparency for AI agent actions.
+
+LangSmith Observability
+A debugging, testing, and monitoring platform for LLM apps.
+
+Core Features: Deep observability (tracing execution, latency, tokens), debugging (finding hallucination/latency culprits), testing/evals (A/B prompt testing), and team collaboration via shareable trace links.
+
+Environment Variables (.env):
+
+LANGCHAIN_TRACING_V2: Set to true to enable v2 tracing.
+
+LANGCHAIN_ENDPOINT: Trace destination URL (e.g., api.smith.langchain.com).
+
+LANGCHAIN_API_KEY: Your unique auth token.
+
+LANGCHAIN_PROJECT: Organizes runs by project name (defaults to "default").
+
+ToolNode
+A pre-built node (langgraph.prebuilt.ToolNode) bridging the graph to external tools. Takes a list of tools as a parameter.
+
+tools_condition: A pre-built conditional edge that routes graph flow based on the LLM's output.
+
+llm.bind_tools(tool_list): Method used to attach tools to the model itself.
