@@ -219,7 +219,7 @@ This notebook is a placeholder for learning LangGraph error handling patterns. C
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/linuschoudhary/MenTechPvtLtd/LangGraph
 cd LangGraph
 ```
 
