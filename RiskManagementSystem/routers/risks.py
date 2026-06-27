@@ -1,11 +1,9 @@
-from fastapi import APIRouter
-from fastapi import Depends
+from fastapi import APIRouter, Depends
 from Model import database
 from Schema import schema
 from typing import List
 from sqlalchemy.orm import Session
 from Repository import risks
-from Scheme.oauth2 import get_current_user
 from Scheme import RoleBasedAccess
 
 get_db = database.get_db

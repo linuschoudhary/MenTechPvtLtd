@@ -1,14 +1,10 @@
 from fastapi import APIRouter
-from fastapi import HTTPException,status,Depends
-from fastapi.responses import JSONResponse
-from Model import model,database
+from fastapi import Depends
+from Model import database
 from Schema import schema
 from typing import List
-from sqlalchemy import and_
-from hashing import Hash
 from sqlalchemy.orm import Session
 from Repository import users
-from Scheme.oauth2 import get_current_user
 from Scheme import RoleBasedAccess
 
 access = RoleBasedAccess.role_required

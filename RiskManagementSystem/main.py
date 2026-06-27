@@ -1,7 +1,6 @@
-from fastapi import FastAPI,HTTPException,status,Depends
+from fastapi import FastAPI,status,Depends
 from fastapi.responses import JSONResponse
 from Model import model,database
-from Schema import schema
 import default
 from routers import risks,users,authenticate
 from Model.database import get_db
