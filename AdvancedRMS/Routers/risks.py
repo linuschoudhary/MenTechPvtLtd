@@ -25,7 +25,7 @@ def show_all_risks(db:Session=Depends(get_db),current_user:schema.Users=Depends(
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="No Risks available.")
 
 @router.get("/id")
-def show_risk_by_id(risk_id:int,db:Session=Depends(get_db),current_user:schema.Users=Depends(access(role_based_access.level_2,end_point="show_risk_by_risk_id"))):
+def show_risk_by_id(risk_id:int,db:Session=Depends(get_db),current_user:schema.Users=Depends(access(role_based_access.level_3,end_point="show_risk_by_risk_id"))):
     """Use this tool when you want the risk details for a particular risk id only."""
     logger.info(f"{current_user.user_email} with role of {current_user.user_role} get the deatils of risk with risk id {risk_id}")
     result=risks.get_risks_by_id(db,risk_id=risk_id)
@@ -42,7 +42,7 @@ def add_new_risk(details: schema.Risks, db:Session=Depends(get_db),current_user:
     return result
 
 @router.post("/update_risk")
-def update_risk(risk_id:int,details:schema.UpdateRisks,db:Session=Depends(get_db),current_user:schema.Users=Depends(access(role_based_access.level_2,end_point="update_risk"))):
+def update_risk(risk_id:int,details:schema.UpdateRisks,db:Session=Depends(get_db),current_user:schema.Users=Depends(access(role_based_access.level_3,end_point="update_risk"))):
     """Use this tool to update any existing risk in database using it's risk id.
     It will not need all the data to update, you can update partial details like only one column can be updated.
     """
