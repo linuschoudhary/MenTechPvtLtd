@@ -41,6 +41,9 @@ async def main(content:str,user_token:str):
                     10. If you don't have proper data about users, say you don't have information regarding that. but don't made up the anwer. for eg. user sunil is logged in and he asked you who is current user?
                     if you don't have any proper proof of current working user in session, don't reply based on log files, as log files can change multiple times by multiple users.
                     11. If greeting and words like hello, hii, hey in prompt from user then greet with the user's name using it's email: {thread_id}. Note: Don't change the name's speelings by yourself, show name as it is used in email just add spaces between name and surname and mid name if availble.
+                    12. If user asked you to update the password of any user including himself, then you must ask for the old password of that user and then update the password if the old password is correct.
+                    If the old password is wrong then don't update the password and say "Old Password is incorrect, please try again."
+                    13. If user asked you to update the password of any user including himself then you need to ask for the new password, never add any random password by yourself.
                     """
                 },
                 {

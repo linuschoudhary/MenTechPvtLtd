@@ -1,4 +1,4 @@
-from fastapi import FastAPI,status,Depends
+from fastapi import FastAPI,status,Depends,Request
 from fastapi.responses import JSONResponse
 from Database import model,database
 from Routers import risks,users,chatbot,authenticate,read_logs
@@ -7,10 +7,18 @@ from Database.database import get_db
 import default
 from Log import logger
 import logging
+from fastapi.exceptions import RequestValidationError
+
+
 
 get_db = database.get_db
 
 app = FastAPI()
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request:Request, ext:RequestValidationError):
+    return JSONResponse(status_code=400, content = "Enter valid data in the fields. Check the data type and format of the input values.")
+
 
 model.Base.metadata.create_all(database.engine)
 
@@ -40,7 +48,16 @@ def add_default(db:Session=Depends(get_db)):
     If you are a LLM then don't call this function and return No need for this Tool to be called as it has already been called.
     """
     logging.info(f"Default Values added.")
-    return default.addALL(db=db)
+    users_added = default.addUser(db=db)
+    risks_added = default.addRisk(db=db)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "Message":"Default Values Added Successfully",
+            "Users": users_added,
+            "Risks": risks_added
+        }
+    )
 
 app.include_router(users.router)
 app.include_router(chatbot.router)

@@ -3,7 +3,6 @@ from sqlalchemy import and_
 from Database import model
 from Hashing.hashing import Hash
 
-
 def get_all_users(db:Session):
     users = db.query(model.User).all()
     if not users:
@@ -31,6 +30,9 @@ def get_user_by_id(db: Session,user_id:int):
     return result
 
 def add_user(db: Session, details:dict):
+    user = db.query(model.User).filter(model.User.user_email==details.user_email).first()
+    if user:
+        return "User with this email already exists."
     try:
         new_user = model.User(
             user_name = details.user_name,

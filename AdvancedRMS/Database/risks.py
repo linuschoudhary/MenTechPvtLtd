@@ -83,6 +83,9 @@ def get_risks_by_id(db:Session,risk_id:int):
 
 
 def add_risks(db:Session,details):
+    risk = db.query(model.Risk).filter(model.Risk.risk_id==details.risk_id).first()
+    if risk:
+        return "Risk with this ID already exists."
     try:
         new_risk = model.Risk(
             risk_title = details.risk_title,

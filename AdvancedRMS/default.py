@@ -1,6 +1,6 @@
 from  Database import model
 from Hashing.hashing import Hash
-
+from sqlalchemy import and_
 
 default_risks = [
     {
@@ -152,8 +152,11 @@ default_users = [
     }
 ]
 
-def addALL(db):
+def addUser(db):
     for user in default_users:
+        usr = db.query(model.User).filter(model.User.user_email == user["user_email"]).first()
+        if usr:
+            return "Default values already added."
         new_user = model.User(
             user_name = user["user_name"],
             user_role = user["user_role"],
@@ -163,8 +166,13 @@ def addALL(db):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+    return "Default users added successfully. Now you can login and use this System."
 
+def addRisk(db):
     for risk in default_risks:
+        rsk = db.query(model.Risk).filter(and_(model.Risk.risk_title == risk["risk_title"],model.Risk.risk_description==risk["risk_description"])).first()
+        if rsk:
+            return "Default values already added."
         new_risk = model.Risk(
             risk_title= risk["risk_title"],
             risk_description= risk["risk_description"],
@@ -182,4 +190,4 @@ def addALL(db):
         db.commit()
         db.refresh(new_risk)
     
-    return "Default values added successfully. Now you can login and use this System."
+    return "Default risks added successfully"

@@ -75,21 +75,21 @@ def api(method, path, **kwargs):
         st.error("⚠️ Cannot reach FastAPI server. Is it running on port 8000?")
         return None
 
-def show_response(resp, success_msg=None):
-    """Display API response in a user-friendly way."""
+def show_response(resp):
+    """Display API response using only what the backend actually returned — no fixed extra lines."""
     if resp is None:
         return
     if resp.status_code in (200, 201):
-        if success_msg:
-            st.success(success_msg)
         try:
             data = resp.json()
-            if isinstance(data, (dict, list)):
-                st.json(data)
-            else:
-                st.info(str(data))
         except Exception:
-            st.info(resp.text)
+            if resp.text:
+                st.success(resp.text)
+            return
+        if isinstance(data, (dict, list)):
+            st.json(data)
+        else:
+            st.success(str(data))
     elif resp.status_code == 401:
         st.error("⛔ Session expired. Please logout and login again.")
     elif resp.status_code == 403:
@@ -220,6 +220,18 @@ def render_log_card(line):
         st.caption('🕒 ' + timestamp)
 
 def render_login_page():
+    top_l, top_r = st.columns([5, 1.4])
+    with top_r:
+        if st.button('➕ Add Default Values', key='login_add_defaults', use_container_width=True):
+            resp = None
+            try:
+                with st.spinner('Please wait...'):
+                    resp = requests.get(f'{BASE}/default')
+            except requests.exceptions.ConnectionError:
+                st.error('Cannot reach FastAPI server. Is it running on port 8000?')
+
+            show_response(resp)
+
     st.markdown(
         '<div class="login-hero"><h1>Risk Management System</h1><p>Sign in to manage risks, users and more.</p></div>',
         unsafe_allow_html=True
@@ -440,47 +452,84 @@ elif page == "📋 Risks":
                         "due_date":         str(a_due),
                     }
                     resp = api("post", "/risk/add_risk", json=payload)
-                    show_response(resp, "✅ Risk added successfully!")
+                    show_response(resp)
 
     # ── Update Risk ──────────────────────────
     with t_update:
         st.subheader("Update Risk")
-        st.caption("Fill only the fields you want to change — everything else stays the same.")
-        with st.form("form_update_risk"):
-            u_risk_id  = st.number_input("Risk ID to Update *", min_value=1, step=1)
-            col1, col2 = st.columns(2)
-            with col1:
-                u_title    = st.text_input("New Title",       placeholder="leave blank = no change")
-                u_desc     = st.text_area("New Description",  placeholder="leave blank = no change")
-                u_priority = st.selectbox("New Priority",     ["— no change —"] + PRIORITIES)
-                u_status   = st.selectbox("New Status",       ["— no change —"] + STATUSES)
-                u_type     = st.selectbox("New Type",         ["— no change —"] + TYPES)
-            with col2:
-                u_category = st.text_input("New Category",    placeholder="leave blank = no change")
-                u_c_by     = st.text_input("New Created By (ID)",     placeholder="leave blank = no change")
-                u_alloc    = st.text_input("New Allocated To (ID)",   placeholder="leave blank = no change")
-                u_assign   = st.text_input("New Assigned To (ID)",    placeholder="leave blank = no change")
-                u_due      = st.text_input("New Due Date (YYYY-MM-DD)", placeholder="leave blank = no change")
+        st.caption("Load a risk's current details, then edit whatever needs to change. Fields you leave as-is are saved unchanged.")
 
-            if st.form_submit_button("✏️ Update Risk", use_container_width=True, type="primary"):
-                payload = {}
-                if u_title:                            payload["risk_title"]       = u_title
-                if u_desc:                             payload["risk_description"] = u_desc
-                if u_priority != "— no change —":     payload["risk_priority"]    = u_priority
-                if u_status   != "— no change —":     payload["risk_status"]      = u_status
-                if u_type     != "— no change —":     payload["risk_type"]        = u_type
-                if u_category:                         payload["risk_category"]    = u_category
-                if u_c_by.strip():                     payload["created_by"]       = int(u_c_by)
-                if u_alloc.strip():                    payload["risk_allocation"]  = int(u_alloc)
-                if u_assign.strip():                   payload["assigned_to"]      = int(u_assign)
-                if u_due.strip():                      payload["due_date"]         = u_due.strip()
-
-                if not payload:
-                    st.warning("No changes detected. Fill at least one field.")
+        lc1, lc2 = st.columns([3, 1])
+        with lc1:
+            u_risk_id = st.number_input("Risk ID to Update *", min_value=1, step=1, key="update_risk_id")
+        with lc2:
+            st.write("")
+            st.write("")
+            if st.button("🔍 Load Details", use_container_width=True, key="load_update_risk"):
+                resp = api("get", "/risk/id", params={"risk_id": int(u_risk_id)})
+                if resp and resp.status_code == 200:
+                    st.session_state["update_risk_data"] = resp.json()
+                    st.session_state["update_risk_data_id"] = int(u_risk_id)
                 else:
+                    st.session_state["update_risk_data"] = None
+                    show_response(resp)
+
+        risk_data  = st.session_state.get("update_risk_data")
+        loaded_rid = st.session_state.get("update_risk_data_id")
+
+        if risk_data and loaded_rid == int(u_risk_id):
+            def _opt_index(options, value):
+                return options.index(value) + 1 if value in options else 0
+
+            def _person_id(value):
+                return value.get("user_id") if isinstance(value, dict) else None
+
+            try:
+                due_default = pd.to_datetime(risk_data.get("due_date")).date()
+            except Exception:
+                due_default = pd.Timestamp.now().date()
+
+            with st.form("form_update_risk"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    u_title    = st.text_input("Title",       value=risk_data.get("risk_title") or "")
+                    u_desc     = st.text_area("Description",  value=risk_data.get("risk_description") or "")
+                    u_priority = st.selectbox("Priority", ["— no change —"] + PRIORITIES,
+                                               index=_opt_index(PRIORITIES, risk_data.get("risk_priority")))
+                    u_status   = st.selectbox("Status", ["— no change —"] + STATUSES,
+                                               index=_opt_index(STATUSES, risk_data.get("risk_status")))
+                    u_type     = st.selectbox("Type", ["— no change —"] + TYPES,
+                                               index=_opt_index(TYPES, risk_data.get("risk_type")))
+                with col2:
+                    u_category = st.text_input("Category", value=risk_data.get("risk_category") or "")
+                    u_c_by     = st.number_input("Created By — User ID", min_value=1, step=1,
+                                                  value=int(_person_id(risk_data.get("created_by")) or 1))
+                    u_alloc    = st.number_input("Allocated To — Manager ID", min_value=1, step=1,
+                                                  value=int(_person_id(risk_data.get("risk_allocation")) or 1))
+                    u_assign   = st.number_input("Assigned To — Employee ID", min_value=1, step=1,
+                                                  value=int(_person_id(risk_data.get("assigned_to")) or 1))
+                    u_due      = st.date_input("Due Date", value=due_default)
+
+                if st.form_submit_button("✏️ Update Risk", use_container_width=True, type="primary"):
+                    payload = {
+                        "risk_title":       u_title or None,
+                        "risk_description": u_desc,
+                        "risk_priority":    None if u_priority == "— no change —" else u_priority,
+                        "risk_status":      None if u_status == "— no change —" else u_status,
+                        "risk_type":        None if u_type == "— no change —" else u_type,
+                        "risk_category":    u_category,
+                        "created_by":       int(u_c_by),
+                        "risk_allocation":  int(u_alloc),
+                        "assigned_to":      int(u_assign),
+                        "due_date":         str(u_due),
+                    }
+                    payload = {k: v for k, v in payload.items() if v is not None}
                     resp = api("post", "/risk/update_risk",
-                               params={"risk_id": int(u_risk_id)}, json=payload)
-                    show_response(resp, "✅ Risk updated successfully!")
+                               params={"risk_id": int(loaded_rid)}, json=payload)
+                    show_response(resp)
+                    st.session_state["update_risk_data"] = None
+        else:
+            st.info("Enter a Risk ID above and click **Load Details** to see and edit its current values.")
 
     # ── Delete Risk ──────────────────────────
     with t_delete:
@@ -494,7 +543,7 @@ elif page == "📋 Risks":
                     st.error("Please check the confirmation box first.")
                 else:
                     resp = api("post", "/risk/delete_risk", params={"risk_id": int(d_risk_id)})
-                    show_response(resp, "✅ Risk deleted.")
+                    show_response(resp)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE — USERS  (Admin only)
@@ -565,31 +614,58 @@ elif page == "👥 Users":
                         "user_role":     a_role,
                     }
                     resp = api("post", "/user/add_user", json=payload)
-                    show_response(resp, "✅ User added successfully!")
+                    show_response(resp)
 
     # ── Update User ──────────────────────────
     with t_update:
         st.subheader("Update User")
-        st.caption("Fill only the fields you want to change.")
-        with st.form("form_update_user"):
-            u_user_id  = st.number_input("User ID to Update *", min_value=1, step=1)
-            u_name     = st.text_input("New Name",     placeholder="leave blank = no change")
-            u_email    = st.text_input("New Email",    placeholder="leave blank = no change")
-            u_password = st.text_input("New Password", placeholder="leave blank = no change", type="password")
-            u_role     = st.selectbox("New Role",      ["— no change —"] + ROLES)
-            if st.form_submit_button("✏️ Update User", use_container_width=True, type="primary"):
-                payload = {}
-                if u_name:                         payload["user_name"]     = u_name
-                if u_email:                        payload["user_email"]    = u_email
-                if u_password:                     payload["user_password"] = u_password
-                if u_role != "— no change —":      payload["user_role"]     = u_role
+        st.caption("Load a user's current details, then edit whatever needs to change.")
 
-                if not payload:
-                    st.warning("No changes detected. Fill at least one field.")
+        lc1, lc2 = st.columns([3, 1])
+        with lc1:
+            u_user_id = st.number_input("User ID to Update *", min_value=1, step=1, key="update_user_id")
+        with lc2:
+            st.write("")
+            st.write("")
+            if st.button("🔍 Load Details", use_container_width=True, key="load_update_user"):
+                resp = api("get", "/user/show_by_id", params={"user_id": int(u_user_id)})
+                if resp and resp.status_code == 200:
+                    st.session_state["update_user_data"] = resp.json()
+                    st.session_state["update_user_data_id"] = int(u_user_id)
                 else:
+                    st.session_state["update_user_data"] = None
+                    show_response(resp)
+
+        user_data  = st.session_state.get("update_user_data")
+        loaded_uid = st.session_state.get("update_user_data_id")
+
+        if user_data and loaded_uid == int(u_user_id):
+            role_options  = ["— no change —"] + ROLES
+            current_role  = user_data.get("user_role")
+            role_index    = role_options.index(current_role) if current_role in role_options else 0
+
+            with st.form("form_update_user"):
+                u_name     = st.text_input("Name",  value=user_data.get("user_name") or "")
+                u_email    = st.text_input("Email", value=user_data.get("user_email") or "")
+                u_password = st.text_input("New Password", placeholder="leave blank to keep the current password", type="password")
+                u_role     = st.selectbox("Role", role_options, index=role_index)
+
+                if st.form_submit_button("✏️ Update User", use_container_width=True, type="primary"):
+                    payload = {
+                        "user_name":  u_name,
+                        "user_email": u_email,
+                        "user_role":  None if u_role == "— no change —" else u_role,
+                    }
+                    if u_password:
+                        payload["user_password"] = u_password
+                    payload = {k: v for k, v in payload.items() if v is not None}
+
                     resp = api("put", "/user/update_user",
-                               params={"user_id": int(u_user_id)}, json=payload)
-                    show_response(resp, "✅ User updated successfully!")
+                               params={"user_id": int(loaded_uid)}, json=payload)
+                    show_response(resp)
+                    st.session_state["update_user_data"] = None
+        else:
+            st.info("Enter a User ID above and click **Load Details** to see and edit its current values.")
 
     # ── Delete User ──────────────────────────
     with t_delete:
@@ -603,7 +679,7 @@ elif page == "👥 Users":
                     st.error("Please check the confirmation box first.")
                 else:
                     resp = api("delete", "/user/delete_user", params={"user_id": int(d_user_id)})
-                    show_response(resp, "✅ User deleted.")
+                    show_response(resp)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE — LOGS  (Admin only)
@@ -699,4 +775,4 @@ elif page == "ℹ️ System":
                     st.error("Please check the confirmation box first.")
                 else:
                     resp = requests.get(f"{BASE}/default")
-                    show_response(resp, "✅ Default data inserted successfully!")
+                    show_response(resp)
